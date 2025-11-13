@@ -34,3 +34,32 @@ class Game:
 
     def flag(self, r: int, c: int) -> None:
         self.board.toggle_flag(r, c)
+
+
+class MinesweeperGame:
+    """
+    Lightweight game wrapper used by the analytics module.
+
+    It exposes a stable interface that returns the underlying board as a 2D list
+    of ints so the analytics code can sample generated layouts without needing
+    to know about Board/Cell internals.
+    """
+
+    MINE = -1
+
+    def __init__(self, rows: int, cols: int, mines: int, safe_first_click: bool = True):
+        self._board = Board(rows, cols, mines, safe_first_click=safe_first_click)
+        self._rows = rows
+        self._cols = cols
+        self._safe_first_click = safe_first_click
+        self._started = False
+
+    def reveal(self, r: int, c: int) -> str:
+        if not self._started:
+            self._board.first_click_place(r, c)
+            self._started = True
+        return self._board.reveal(r, c)
+
+    @property
+    def board(self):
+        return [[cell.number for cell in row] for row in self._board.grid]

@@ -1,12 +1,15 @@
-
 from __future__ import annotations
+
 import tkinter as tk
 from tkinter import messagebox, simpledialog
 import subprocess
+
 from .board import Board
 from .game import Game
 from .config import EASY, INTERMEDIATE, EXPERT
 from . import highscores
+from . import analytics     # <- THIS is important
+
 
 BOMB = "💣"
 FLAG = "🚩"
@@ -209,7 +212,59 @@ class Launcher(tk.Tk):
         tk.messagebox.showinfo("High Scores", "\n".join(lines))
 
     def _run_analytics_info(self):
-        tk.messagebox.showinfo("Analytics", "Programmatic-only in this build. (Use analytics module.)")
+        """
+        GUI entry for analytics:
+        - Ask user for difficulty (Easy / Intermediate / Expert)
+        - Ask user for number of boards
+        - Generate boards and show ALL plots in one window.
+        """
+        # Choose difficulty for analytics
+        choice = simpledialog.askstring(
+            "Analytics Difficulty",
+            "Enter difficulty for analytics:\n"
+            "easy / intermediate / expert",
+            parent=self,
+        )
+        if not choice:
+            return
+
+        choice = choice.strip().lower()
+        if choice.startswith("e") and "asy" in choice:
+            diff = EASY
+        elif choice.startswith("i"):
+            diff = INTERMEDIATE
+        elif choice.startswith("e") and "xpert" in choice:
+            diff = EXPERT
+        else:
+            messagebox.showerror(
+                "Error",
+                "Invalid difficulty. Use: easy / intermediate / expert.",
+                parent=self,
+            )
+            return
+
+        # Number of random boards
+        n = simpledialog.askinteger(
+            "Analytics",
+            "How many random boards to generate?",
+            parent=self,
+            minvalue=5,
+            maxvalue=500,
+        )
+        if not n:
+            return
+
+        rows, cols, mines = diff.rows, diff.cols, diff.mines
+
+        # Generate boards & show all plots in a single figure
+        boards = analytics.gen_boards(rows, cols, mines, n)
+        if not boards:
+            messagebox.showinfo("Analytics", "No boards generated.", parent=self)
+            return
+
+        analytics.show_all_plots(boards)
+
+
 
 class Tile(tk.Frame):
     def __init__(self, master, pal, size=26):

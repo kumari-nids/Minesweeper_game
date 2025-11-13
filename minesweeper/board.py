@@ -48,6 +48,18 @@ class Board:
                 self.grid[r][c].number = n
         self._mines_placed = True
 
+        print("\n[DEBUG] Initial Board Layout (M = mine, numbers = adjacent mine counts):")
+        for r in range(self.rows):
+            row_repr = []
+            for c in range(self.cols):
+                cell = self.grid[r][c]
+                if cell.mine:
+                    row_repr.append("M")
+                else:
+                    row_repr.append(str(cell.number))
+            print(" ".join(row_repr))
+        print()
+
     def first_click_place(self, fr: int, fc: int) -> None:
         if self._mines_placed: return
         if not self.safe_first_click:
