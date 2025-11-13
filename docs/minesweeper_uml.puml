@@ -1,0 +1,121 @@
+@startuml
+title Minesweeper Application Overview
+
+skinparam classAttributeIconSize 0
+skinparam backgroundColor #fefefe
+skinparam shadowing false
+
+package config {
+    class Difficulty {
+        +rows: int
+        +cols: int
+        +mines: int
+    }
+}
+
+package board {
+    class Cell {
+        mine: bool
+        number: int
+        revealed: bool
+        flagged: bool
+    }
+
+    class Board {
+        +rows: int
+        +cols: int
+        +mines: int
+        +grid: List<List<Cell>>
+        safe_first_click: bool
+        _mines_placed: bool
+        +neighbors(r, c)
+        +first_click_place(r, c)
+        +reveal(r, c)
+        +toggle_flag(r, c)
+        +count_revealed()
+        +count_non_mines()
+    }
+}
+
+package game {
+    class Game {
+        +board: Board
+        started: bool
+        start_time: float
+        won: bool
+        lost: bool
+        +click(r, c)
+        +flag(r, c)
+    }
+
+    class MinesweeperGame {
+        _board: Board
+        _rows: int
+        _cols: int
+        _safe_first_click: bool
+        _started: bool
+        +reveal(r, c)
+        +board()
+    }
+}
+
+package gui {
+    class Launcher {
+        theme: str
+        colorblind: bool
+        safe_first_click: bool
+        +_start(diff: Difficulty)
+        +_run_analytics_info()
+    }
+
+    class MinesweeperWindow {
+        rows: int
+        cols: int
+        mines: int
+        theme: str
+        colorblind: bool
+        safe_first_click: bool
+        tiles: Dict[Tuple, Tile]
+        +_new_game()
+        +_on_left(r, c)
+        +_on_right(r, c)
+        +_refresh()
+    }
+
+    class Tile {
+        pal: Dict[str, str]
+        +set_raised()
+        +set_pressed()
+        +set_revealed_base()
+        +set_text(text, fg)
+        +set_flag(fg)
+    }
+}
+
+package analytics {
+    class "analytics module" as Analytics <<module>> {
+        +gen_boards(rows, cols, mines, n)
+        +show_all_plots(boards)
+    }
+}
+
+package highscores {
+    class "highscores module" as Highscores <<module>> {
+        +submit_score(rows, cols, mines, name, elapsed)
+        +get_top10(rows, cols, mines)
+    }
+}
+
+Launcher --> Difficulty : selects
+Launcher --> MinesweeperWindow : creates
+Launcher --> Analytics : runs plots
+MinesweeperWindow *-- Game
+MinesweeperWindow o-- Tile : renders
+MinesweeperWindow --> Highscores : store/view\nscores
+MinesweeperWindow --> Difficulty : board sizing
+Game *-- Board
+MinesweeperGame *-- Board
+Board *-- Cell
+Analytics ..> MinesweeperGame : samples boards
+
+@enduml
