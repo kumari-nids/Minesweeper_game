@@ -1,7 +1,7 @@
 
 from __future__ import annotations
 import time
-from .board import Board
+from board import Board
 
 class Game:
     def __init__(self, board: Board):

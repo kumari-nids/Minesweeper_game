@@ -4,11 +4,11 @@ import tkinter as tk
 from tkinter import messagebox, simpledialog
 import subprocess
 
-from .board import Board
-from .game import Game
-from .config import EASY, INTERMEDIATE, EXPERT
-from . import highscores
-from . import analytics     # <- THIS is important
+from board import Board
+from game import Game
+from config import EASY, INTERMEDIATE, EXPERT
+import highscores
+import analytics     # <- THIS is important
 
 
 BOMB = "💣"
