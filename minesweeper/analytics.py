@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 
 # This assumes you are inside the `minesweeper` package.
 # If this file sits next to game.py and __init__.py, this is correct:
-from .game import MinesweeperGame
+from game import MinesweeperGame
 
 MINE = MinesweeperGame.MINE  # e.g. -1
 

@@ -6,10 +6,9 @@ import subprocess
 
 from board import Board
 from game import Game
-from config import EASY, INTERMEDIATE, EXPERT
+from config import EASY, INTERMEDIATE, EXPERT, Difficulty
 import highscores
 import analytics     # <- THIS is important
-
 
 BOMB = "💣"
 FLAG = "🚩"
@@ -70,7 +69,7 @@ class Launcher(tk.Tk):
             try: splash.attributes("-alpha", a)
             except Exception: pass
             if a < 1.0: self.after(30, lambda: fade_in(a+0.08))
-            else: self.after(4000, fade_out)
+            else: self.after(1000, fade_out)
         def fade_out(a=1.0):
             try: splash.attributes("-alpha", a)
             except Exception: pass
@@ -106,6 +105,7 @@ class Launcher(tk.Tk):
         add_btn("Easy",           lambda: self._start(EASY), top=0)
         add_btn("Intermediate",   lambda: self._start(INTERMEDIATE))
         add_btn("Expert",         lambda: self._start(EXPERT))
+        add_btn("Custom",         self._start_custom)
         add_btn("High Scores",    self._show_highscores_dialog, top=14)
         add_btn("Run Analytics…", self._run_analytics_info)
 
@@ -196,6 +196,41 @@ class Launcher(tk.Tk):
         game.protocol("WM_DELETE_WINDOW", lambda: (game.destroy(), self.deiconify()))
         game.mainloop()
 
+    def _prompt_custom_board(self, title="Custom Board"):
+        rows = simpledialog.askinteger(
+            title, "Rows (5-500):", parent=self, minvalue=5, maxvalue=500
+        )
+        if rows is None:
+            return None
+
+        cols = simpledialog.askinteger(
+            title, "Columns (5-500):", parent=self, minvalue=5, maxvalue=500
+        )
+        if cols is None:
+            return None
+
+        max_mines = rows * cols - 1
+        if max_mines <= 0:
+            messagebox.showerror(title, "Board is too small for mines.", parent=self)
+            return None
+
+        mines = simpledialog.askinteger(
+            title,
+            f"Mines (1-{max_mines}):",
+            parent=self,
+            minvalue=1,
+            maxvalue=max_mines,
+        )
+        if mines is None:
+            return None
+
+        return Difficulty(rows, cols, mines)
+
+    def _start_custom(self):
+        diff = self._prompt_custom_board("Custom Board")
+        if diff:
+            self._start(diff)
+
     def _show_highscores_dialog(self):
         choice = simpledialog.askstring("High Scores", "Enter one: easy, intermediate, expert")
         if not choice: return
@@ -214,7 +249,7 @@ class Launcher(tk.Tk):
     def _run_analytics_info(self):
         """
         GUI entry for analytics:
-        - Ask user for difficulty (Easy / Intermediate / Expert)
+        - Ask user for difficulty (Easy / Intermediate / Expert / Custom)
         - Ask user for number of boards
         - Generate boards and show ALL plots in one window.
         """
@@ -222,7 +257,7 @@ class Launcher(tk.Tk):
         choice = simpledialog.askstring(
             "Analytics Difficulty",
             "Enter difficulty for analytics:\n"
-            "easy / intermediate / expert",
+            "easy / intermediate / expert / custom",
             parent=self,
         )
         if not choice:
@@ -235,10 +270,14 @@ class Launcher(tk.Tk):
             diff = INTERMEDIATE
         elif choice.startswith("e") and "xpert" in choice:
             diff = EXPERT
+        elif choice.startswith("c"):
+            diff = self._prompt_custom_board("Analytics Custom Board")
+            if not diff:
+                return
         else:
             messagebox.showerror(
                 "Error",
-                "Invalid difficulty. Use: easy / intermediate / expert.",
+                "Invalid difficulty. Use: easy / intermediate / expert / custom.",
                 parent=self,
             )
             return
