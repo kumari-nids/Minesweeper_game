@@ -91,16 +91,27 @@ class Launcher(tk.Tk):
         x = (sw - min_w) // 2; y = int((sh - min_h) * 0.25)
         self.geometry(f"{min_w}x{min_h}+{x}+{y}")
 
-        self.content_card = tk.Frame(self, padx=24, pady=22)
+        self.content_card = tk.Frame(self, padx=24, pady=22, bd=0, highlightthickness=0)
         self.content_card.place(relx=0.5, rely=0.50, anchor="center")
-        self.title_label = tk.Label(self.content_card, text="Minesweeper", font=("Helvetica", 24, "bold"))
+        self.title_label = tk.Label(self.content_card, text=f"Minesweeper {BOMB}", font=("Helvetica", 24, "bold"))
         self.title_label.pack(pady=(0, 18))
 
-        self._menu_buttons = []
+        self._menu_labels = []
         def add_btn(text, cmd, top=8):
-            b = tk.Button(self.content_card, text=text, width=28, command=cmd)
-            b.pack(pady=(top, 8))
-            self._menu_buttons.append(b)
+            lbl = tk.Label(
+                self.content_card,
+                text=text,
+                font=("Helvetica", 16),
+                cursor="arrow",
+                pady=4,
+                bd=0,
+                highlightthickness=0,
+            )
+            lbl.pack(pady=(top, 8))
+            lbl.bind("<Button-1>", lambda _e, fn=cmd: fn())
+            lbl.bind("<Enter>", lambda _e, w=lbl: w.config(fg=getattr(w, "_hover_fg", w.cget("fg"))))
+            lbl.bind("<Leave>", lambda _e, w=lbl: w.config(fg=getattr(w, "_normal_fg", w.cget("fg"))))
+            self._menu_labels.append(lbl)
 
         add_btn("Easy",           lambda: self._start(EASY), top=0)
         add_btn("Intermediate",   lambda: self._start(INTERMEDIATE))
@@ -109,12 +120,9 @@ class Launcher(tk.Tk):
         add_btn("High Scores",    self._show_highscores_dialog, top=14)
         add_btn("Run Analytics…", self._run_analytics_info)
 
-        self.settings_icon = tk.Label(self, text="⚙️", cursor="hand2")
-        self.quit_icon = tk.Label(self, text="✖️", cursor="hand2")
+        self.settings_icon = tk.Label(self, text="⚙️", cursor="arrow")
         self.settings_icon.place(relx=0.02, rely=0.98, anchor="sw")
-        self.quit_icon.place(relx=0.98, rely=0.98, anchor="se")
         self.settings_icon.bind("<Button-1>", lambda e: self._open_settings())
-        self.quit_icon.bind("<Button-1>", lambda e: self.destroy())
 
         self._apply_menu_theme()
 
@@ -138,21 +146,22 @@ class Launcher(tk.Tk):
     def _menu_palette(self):
         mode = self._resolved_theme()
         if mode == "dark":
-            return {"bg":"#808080","card_bg":"#a9a9a9","title_fg":"#000000",
-                    "btn_bg":"#cfcfcf","btn_fg":"#000000","btn_active":"#dedede","icon_fg":"#000000"}
+            return {"bg":"#181818","card_bg":"#181818","title_fg":"#f5f5f5",
+                    "btn_bg":"#181818","btn_fg":"#f5f5f5","btn_hover":"#ffffff","icon_fg":"#f5f5f5"}
         else:
-            return {"bg":"#f2f2f2","card_bg":"#ffffff","title_fg":"#202020",
-                    "btn_bg":"#ffffff","btn_fg":"#202020","btn_active":"#f0f0f0","icon_fg":"#202020"}
+            return {"bg":"#f2f2f2","card_bg":"#f2f2f2","title_fg":"#303030",
+                    "btn_bg":"#f2f2f2","btn_fg":"#303030","btn_hover":"#000000","icon_fg":"#303030"}
 
     def _apply_menu_theme(self):
         pal = self._menu_palette()
         self.configure(bg=pal["bg"])
         self.content_card.configure(bg=pal["card_bg"])
         self.title_label.configure(bg=pal["card_bg"], fg=pal["title_fg"])
-        for b in getattr(self, "_menu_buttons", []):
-            b.configure(bg=pal["btn_bg"], activebackground=pal["btn_active"], fg=pal["btn_fg"])
+        for lbl in getattr(self, "_menu_labels", []):
+            lbl.configure(bg=pal["btn_bg"], fg=pal["btn_fg"])
+            lbl._normal_fg = pal["btn_fg"]
+            lbl._hover_fg = pal["btn_hover"]
         self.settings_icon.configure(bg=pal["bg"], fg=pal["icon_fg"])
-        self.quit_icon.configure(bg=pal["bg"], fg=pal["icon_fg"])
 
     # ----- Settings & extras -----
     def _open_settings(self):
@@ -198,13 +207,13 @@ class Launcher(tk.Tk):
 
     def _prompt_custom_board(self, title="Custom Board"):
         rows = simpledialog.askinteger(
-            title, "Rows (5-500):", parent=self, minvalue=5, maxvalue=500
+            title, "Rows (5-60):", parent=self, minvalue=5, maxvalue=60
         )
         if rows is None:
             return None
 
         cols = simpledialog.askinteger(
-            title, "Columns (5-500):", parent=self, minvalue=5, maxvalue=500
+            title, "Columns (5-60):", parent=self, minvalue=5, maxvalue=60
         )
         if cols is None:
             return None
@@ -232,11 +241,27 @@ class Launcher(tk.Tk):
             self._start(diff)
 
     def _show_highscores_dialog(self):
-        choice = simpledialog.askstring("High Scores", "Enter one: easy, intermediate, expert")
-        if not choice: return
-        diff = {"easy": EASY, "intermediate": INTERMEDIATE, "expert": EXPERT}.get(choice.strip().lower())
-        if not diff:
-            tk.messagebox.showerror("High Scores", "Invalid choice."); return
+        choice = simpledialog.askstring(
+            "High Scores",
+            "Enter one: easy, intermediate, expert, custom",
+            parent=self,
+        )
+        if not choice:
+            return
+        key = choice.strip().lower()
+        if key.startswith("e") and "asy" in key:
+            diff = EASY
+        elif key.startswith("i"):
+            diff = INTERMEDIATE
+        elif key.startswith("e") and "xpert" in key:
+            diff = EXPERT
+        elif key.startswith("c"):
+            diff = self._prompt_custom_board("Custom High Scores")
+            if not diff:
+                return
+        else:
+            tk.messagebox.showerror("High Scores", "Invalid choice.", parent=self)
+            return
         rows, cols, mines = diff.rows, diff.cols, diff.mines
         top = highscores.get_top10(rows, cols, mines)
         if not top:
@@ -376,13 +401,14 @@ class MinesweeperWindow(tk.Toplevel):
 
         self.board_frame = tk.Frame(self, padx=8, pady=8); self.board_frame.pack()
         bottom = tk.Frame(self, padx=8, pady=8); bottom.pack(fill="x")
-        tk.Button(bottom, text="⬅️", width=2, command=self._back_to_menu).pack(side="right")
+        self.back_button = tk.Button(bottom, text="🔙", width=2, command=self._back_to_menu, relief="flat", bd=0, highlightthickness=0)
+        self.back_button.pack(side="right")
 
     def _get_theme_palette(self):
         if self.theme == 'dark':
-            return {"bg":"#808080","board_bg":"#808080","tile_unrev_bg":"#c0c0c0","tile_unrev_hover":"#d0d0d0",
-                    "tile_rev_bg":"#e0e0e0","tile_fg":"#000000","flag_fg":"#d32f2f","mine_fg":"#000000",
-                    "edge_light":"#ffffff","edge_dark":"#7b7b7b"}
+            return {"bg":"#181818","board_bg":"#1f1f1f","tile_unrev_bg":"#252525","tile_unrev_hover":"#333333",
+                    "tile_rev_bg":"#2f2f2f","tile_fg":"#f5f5f5","flag_fg":"#ff6f61","mine_fg":"#ffeb3b",
+                    "edge_light":"#3a3a3a","edge_dark":"#101010"}
         else:
             return {"bg":"#f2f2f2","board_bg":"#eaeaea","tile_unrev_bg":"#fafafa","tile_unrev_hover":"#f0f0f0",
                     "tile_rev_bg":"#e6e6e6","tile_fg":"#000000","flag_fg":"#c62828","mine_fg":"#000000",
@@ -391,6 +417,8 @@ class MinesweeperWindow(tk.Toplevel):
     def _apply_theme(self):
         pal = self._get_theme_palette()
         self.configure(bg=pal["bg"]); self.board_frame.configure(bg=pal["board_bg"])
+        if hasattr(self, "back_button"):
+            self.back_button.configure(bg=pal["bg"], fg=pal["tile_fg"], activebackground=pal["tile_unrev_hover"], activeforeground=pal["tile_fg"], relief="flat", bd=0, highlightthickness=0)
         if hasattr(self, "tiles"):
             for (r,c), t in self.tiles.items():
                 t.pal = pal
@@ -466,7 +494,7 @@ class MinesweeperWindow(tk.Toplevel):
         if self.game.won or self.game.lost: return
         result = self.game.click(r, c); self._refresh()
         if result == "mine":
-            self._reveal_all(); self.face_var.set(DEAD); messagebox.showinfo("Game Over", "Boom! You clicked on a mine.")
+            self._reveal_all(); self.face_var.set(DEAD); messagebox.showinfo("Game Over", "Boom💥!\n You clicked on a mine💣.")
         elif self.game.won:
             self._reveal_all(); self.face_var.set(COOL)
             name = simpledialog.askstring("You won!", "Enter your name for highscores:")
