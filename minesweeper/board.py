@@ -65,7 +65,8 @@ class Board:
         if not self.safe_first_click:
             self._place_mines()
             return
-        excl = {(fr, fc), *self.neighbors(fr, fc)}
+        # Only guarantee the first clicked cell is clear; neighbors may contain mines.
+        excl = {(fr, fc)}
         self._place_mines(excl)
 
     def reveal(self, r: int, c: int) -> str:
